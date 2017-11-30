@@ -5,7 +5,7 @@ import simkit.examples.ArrivalProcess;
 import simkit.random.RandomVariate;
 
 /**
- *
+ * 
  * @author ahbuss
  */
 public class EntityArrivalProcess extends ArrivalProcess {
@@ -14,6 +14,9 @@ public class EntityArrivalProcess extends ArrivalProcess {
         super(iat);
     }
     
+    /**
+     * Calls super.doArrival(); schedules Arrival(Entity) with delay of 0.0
+     */
     @Override
     public void doArrival() {
         super.doArrival();

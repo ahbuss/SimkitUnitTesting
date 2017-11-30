@@ -11,6 +11,9 @@ import simkit.SimEntityBase;
 import simkit.random.RandomVariate;
 
 /**
+ * This approach to a multiple server queue has distinct Entities 
+ * representing customers, and distinct servers, represented by
+ * a container of integers.
  * @version $Id: EntityServer.java 486 2016-04-01 00:01:18Z ahbuss $
  * @author ahbuss
  */
@@ -26,11 +29,25 @@ public class EntityServer extends SimEntityBase {
 
     protected double timeInSystem;
 
+    /**
+     * Instantiate queue and availabvleServers containers. The queue
+     * container is a TreeSet instance, which (by default) will sort
+     * arriving Entities by their timeStamp.
+     * 
+     * <p>The the availableServers container is a LinkedHashSet instance.
+     * This has the effect of rotating the servers.
+     */
     public EntityServer() {
         this.queue = new TreeSet<>();
         this.availableServers = new LinkedHashSet<>();
     }
 
+    /**
+     * Calls zero-argument constructor to ensure that queue and availableServers
+     * are instantiated. Sets totalNumberServers and serviceTimeGenerator
+     * @param totalNumberServers Given total number of servers
+     * @param serviceTimeGenerator Given generator for service times
+     */
     public EntityServer(int totalNumberServers,
             RandomVariate serviceTimeGenerator) {
         this();
@@ -39,7 +56,8 @@ public class EntityServer extends SimEntityBase {
     }
 
     /**
-     * Empty queue; repopulate availableServers
+     * Empty queue; re-populate availableServers with 0 ... totalNumberServers - 1.
+     * Initialize timeInSystem to NaN
      */
     @Override
     public void reset() {
@@ -58,6 +76,7 @@ public class EntityServer extends SimEntityBase {
     public void doRun() {
         firePropertyChange("availableServers", getAvailableServers());
         firePropertyChange("queue", getQueue());
+        firePropertyChange("timeInSystem", getTimeInSystem());
     }
 
     /**
@@ -131,6 +150,11 @@ public class EntityServer extends SimEntityBase {
         return totalNumberServers;
     }
 
+    /**
+     * 
+     * @param totalNumberServers Given totalNumberServers
+     * @throws IllegalArgumentException if totalNumberServers &le; 0
+     */
     public void setTotalNumberServers(int totalNumberServers) {
         if (totalNumberServers <= 0) {
             throw new IllegalArgumentException("totalNumberServers must be > 0:"
@@ -139,18 +163,34 @@ public class EntityServer extends SimEntityBase {
         this.totalNumberServers = totalNumberServers;
     }
 
+    /**
+     * 
+     * @return the serviceTimeGenerator
+     */
     public RandomVariate getServiceTimeGenerator() {
         return serviceTimeGenerator;
     }
 
+    /**
+     * sets the serviceTimeGenerator
+     * @param serviceTimeGenerator Given serviceTimeGenerator
+     */
     public void setServiceTimeGenerator(RandomVariate serviceTimeGenerator) {
         this.serviceTimeGenerator = serviceTimeGenerator;
     }
 
+    /**
+     * Copies are shallow
+     * @return copy of availableServers
+     */
     public Set<Integer> getAvailableServers() {
         return new LinkedHashSet<>(availableServers);
     }
 
+    /**
+     * Copies are shallow
+     * @return copy of queue
+     */
     public SortedSet<Entity> getQueue() {
         return new TreeSet<>(queue);
     }

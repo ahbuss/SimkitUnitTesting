@@ -7,7 +7,6 @@ import simkit.random.RandomVariate;
 import simkit.random.RandomVariateFactory;
 import simkit.stat.CollectionSizeTimeVaryingStats;
 import simkit.stat.SimpleStatsTally;
-import simkit.stat.SimpleStatsTimeVarying;
 import simkit.util.SimplePropertyDumper;
 
 /**
@@ -49,13 +48,13 @@ public class RunEntityServer {
 //        entityServer.addPropertyChangeListener(simplePropertyDumper);
 
 //        Schedule.setVerbose(true);
-        double stopTime = 10000;
+        double stopTime = 1000000;
         Schedule.stopAtTime(stopTime);
 
         Schedule.reset();
         Schedule.startSimulation();
         
-        System.out.println("Simulation ended at time " + Schedule.getSimTime());
+        System.out.printf("Simulation ended at time %,.3f%n", Schedule.getSimTime());
         
         System.out.printf("Avg # available servers: %.3f%n", numberAvailableServersStat.getMean());
         System.out.printf("Avg utilization: %.3f%n", 1.0 - numberAvailableServersStat.getMean() / 
