@@ -10,6 +10,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import simkit.Entity;
+import static simkit.Priority.HIGH;
 import simkit.SimEvent;
 import simkit.random.RandomVariateFactory;
 import simkit.util.PropertyChangeListenerHelper;
@@ -166,6 +167,7 @@ public class EntityServerTest {
         assertNotNull(scheduledEvent);
         assertEquals(0, scheduledEvent.getParameters().length);
         assertEquals(simTime, scheduledEvent.getScheduledTime(), EPSILON);
+        assertEquals(HIGH, scheduledEvent.getPriority());
 
 //        Now check that the StartService event is not scheduled when there
 //        are no available servers

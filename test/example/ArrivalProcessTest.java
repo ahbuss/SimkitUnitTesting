@@ -7,8 +7,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import simkit.BasicEventList;
-import simkit.Schedule;
 import simkit.SimEvent;
 import simkit.random.RandomVariateFactory;
 import simkit.util.PropertyChangeListenerHelper;
@@ -45,6 +43,7 @@ public class ArrivalProcessTest {
 
     @Before
     public void setUp() {
+        eventList.coldReset();
         instance.setInterarrivalTimeGenerator(RandomVariateFactory.getInstance("Constant", 2.5));
     }
 
