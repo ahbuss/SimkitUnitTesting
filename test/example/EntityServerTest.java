@@ -1,5 +1,6 @@
 package example;
 
+import java.beans.PropertyChangeEvent;
 import java.util.Set;
 import java.util.SortedSet;
 import org.junit.After;
@@ -10,7 +11,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import simkit.Entity;
 import simkit.Schedule;
-import simkit.random.RandomVariate;
+import simkit.SimEvent;
 import simkit.random.RandomVariateFactory;
 import simkit.util.PropertyChangeListenerHelper;
 import simkit.util.UnitTestEventList;
@@ -20,68 +21,90 @@ import simkit.util.UnitTestEventList;
  * @author ahbuss
  */
 public class EntityServerTest {
-    
+
+    public static final double EPSILON = 1.0E-8;
+
     private static UnitTestEventList eventList;
-    
+
     private static PropertyChangeListenerHelper queuePropertyChangeListener;
     private static PropertyChangeListenerHelper availableServersPropertyChangeListener;
+    private static PropertyChangeListenerHelper timeInSystemPropertyChangeListener;
     private static EntityServer instance;
-    
+
     public EntityServerTest() {
     }
-    
+
     @BeforeClass
     public static void setUpClass() {
         int id = Schedule.addNewEventList(UnitTestEventList.class);
-        eventList = (UnitTestEventList )Schedule.getEventList(id);
+        eventList = (UnitTestEventList) Schedule.getEventList(id);
         Schedule.setDefaultEventList(eventList);
-        
+
         instance = new EntityServer();
         instance.setTotalNumberServers(5);
         instance.setServiceTimeGenerator(RandomVariateFactory.getInstance("Constant", 1.2));
         queuePropertyChangeListener = new PropertyChangeListenerHelper();
         availableServersPropertyChangeListener = new PropertyChangeListenerHelper();
-        instance.addPropertyChangeListener(queuePropertyChangeListener);
-        instance.addPropertyChangeListener(availableServersPropertyChangeListener);
+        timeInSystemPropertyChangeListener = new PropertyChangeListenerHelper();
+        instance.addPropertyChangeListener("queue", queuePropertyChangeListener);
+        instance.addPropertyChangeListener("availableServers", availableServersPropertyChangeListener);
+        instance.addPropertyChangeListener("timeInSystem", timeInSystemPropertyChangeListener);
     }
-    
+
     @AfterClass
     public static void tearDownClass() {
     }
-    
+
     @Before
     public void setUp() {
+        eventList.coldReset();
         instance.reset();
         queuePropertyChangeListener.reset();
         availableServersPropertyChangeListener.reset();
     }
-    
+
     @After
     public void tearDown() {
     }
 
     /**
-     * Test of reset method, of class EntityServer.
+     * First add a "server" to availableServers and an Entity to queue. After
+     * calling reset(), the queue should be empty and availableServers restored
+     * to containing 0...totalNumberServers - 1
      */
     @Test
     public void testReset() {
         System.out.println("reset");
-        EntityServer instance = null;
+        instance.availableServers.add(20);
+        instance.queue.add(new Entity());
         instance.reset();
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        assertTrue(instance.queue.isEmpty());
+        assertEquals(instance.getTotalNumberServers(), instance.availableServers.size());
+        for (int i = 0; i < instance.getTotalNumberServers(); ++i) {
+            assertTrue(instance.availableServers.contains(i));
+        }
     }
 
     /**
-     * Test of doRun method, of class EntityServer.
+     * Verifies that the property change events are being fired and have the
+     * correct values.
      */
     @Test
     public void testDoRun() {
         System.out.println("doRun");
-        EntityServer instance = null;
         instance.doRun();
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        PropertyChangeEvent queueEvent = queuePropertyChangeListener.getLastEvent();
+        assertNotNull(queueEvent);
+        assertEquals("queue", queueEvent.getPropertyName());
+        assertNull(queueEvent.getOldValue());
+        assertEquals(queueEvent.getNewValue(), instance.queue);
+
+        PropertyChangeEvent availableServersEvent = availableServersPropertyChangeListener.getLastEvent();
+        assertNotNull(availableServersEvent);
+        assertEquals("availableServers", availableServersEvent.getPropertyName());
+        assertNull(availableServersEvent.getOldValue());
+        assertEquals(availableServersEvent.getNewValue(), instance.availableServers);
+
     }
 
     /**
@@ -90,11 +113,37 @@ public class EntityServerTest {
     @Test
     public void testDoArrival() {
         System.out.println("doArrival");
-        Entity entity = null;
-        EntityServer instance = null;
+
+        double simTime = 12345.6;
+        eventList.setSimTime(simTime);
+
+        Entity entity = new Entity();
         instance.doArrival(entity);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+
+        assertEquals(1, instance.queue.size());
+        assertTrue(instance.queue.contains(entity));
+
+        PropertyChangeEvent queueEvent = queuePropertyChangeListener.getLastEvent();
+        assertNotNull(queueEvent);
+        assertEquals(instance.queue, queueEvent.getNewValue());
+
+        PropertyChangeEvent availableServersEvent = availableServersPropertyChangeListener.getLastEvent();
+        assertNull(availableServersEvent);
+
+        assertEquals(1, eventList.getScheduledEvents().size());
+        SimEvent scheduledEvent = eventList.getScheduledEvent("StartService");
+        assertNotNull(scheduledEvent);
+        assertEquals(0, scheduledEvent.getParameters().length);
+        assertEquals(simTime, scheduledEvent.getScheduledTime(), EPSILON);
+
+        eventList.coldReset();
+        instance.queue.clear();
+        instance.availableServers.clear();
+        instance.doArrival(entity);
+        assertEquals(1, instance.queue.size());
+        assertTrue(instance.queue.contains(entity));
+
+        assertTrue(eventList.getScheduledEvents().isEmpty());
     }
 
     /**
@@ -103,10 +152,45 @@ public class EntityServerTest {
     @Test
     public void testDoStartService() {
         System.out.println("doStartService");
-        EntityServer instance = null;
+        double simTime = 54321.0;
+        eventList.setSimTime(simTime);
+
+        double serviceTime = 13.5;
+        instance.setServiceTimeGenerator(RandomVariateFactory.getInstance("Constant", serviceTime));
+
+        instance.queue.clear();
+        instance.availableServers.clear();
+        instance.availableServers.add(0);
+        instance.availableServers.add(3);
+        Entity entity = new Entity();
+        instance.queue.add(entity);
         instance.doStartService();
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+
+        assertTrue(instance.queue.isEmpty());
+        assertTrue(instance.availableServers.contains(3));
+        assertFalse(instance.availableServers.contains(0));
+
+        PropertyChangeEvent queueEvent = queuePropertyChangeListener.getLastEvent();
+        assertNotNull(queueEvent);
+        assertEquals("queue", queueEvent.getPropertyName());
+        assertNotNull(queueEvent.getOldValue());
+        assertEquals(queueEvent.getNewValue(), instance.queue);
+
+        PropertyChangeEvent availableServersEvent = availableServersPropertyChangeListener.getLastEvent();
+        assertNotNull(availableServersEvent);
+        assertEquals("availableServers", availableServersEvent.getPropertyName());
+        assertNotNull(availableServersEvent.getOldValue());
+        assertEquals(availableServersEvent.getNewValue(), instance.availableServers);
+        
+        assertEquals(1, eventList.getScheduledEvents().size());
+        SimEvent scheduledEvent = eventList.getScheduledEvent("EndService");
+        assertNotNull(scheduledEvent);
+        assertEquals(simTime + serviceTime, scheduledEvent.getScheduledTime(), EPSILON);
+        assertEquals(2, scheduledEvent.getParameters().length);
+        
+        assertEquals(0, scheduledEvent.getParameters()[0]);
+        assertEquals(entity, scheduledEvent.getParameters()[1]);
+
     }
 
     /**
@@ -115,29 +199,67 @@ public class EntityServerTest {
     @Test
     public void testDoEndService() {
         System.out.println("doEndService");
-        int server = 0;
-        Entity entity = null;
-        EntityServer instance = null;
-        instance.doEndService(server, entity);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        
+        double arrivalTime = 2468.9;
+        eventList.setSimTime(arrivalTime);
+        Entity completingEntity = new Entity();
+
+        double simTime = 35791.3;
+        eventList.setSimTime(simTime);
+        
+        Entity entityInQueue = new Entity();
+        instance.queue.add(entityInQueue);
+        instance.availableServers.clear();
+        
+        int server = 3;
+        instance.doEndService(server, completingEntity);
+        
+        double expectedTimeInSystem = simTime - arrivalTime;
+        assertEquals(expectedTimeInSystem, instance.getTimeInSystem(), EPSILON);
+        
+        assertEquals(1, instance.availableServers.size());
+        assertTrue(instance.availableServers.contains(server));
+        
+        PropertyChangeEvent queueEvent = queuePropertyChangeListener.getLastEvent();
+        assertNull(queueEvent);
+
+        PropertyChangeEvent availableServersEvent = availableServersPropertyChangeListener.getLastEvent();
+        assertNotNull(availableServersEvent);
+        assertEquals("availableServers", availableServersEvent.getPropertyName());
+        assertNotNull(availableServersEvent.getOldValue());
+        assertEquals(availableServersEvent.getNewValue(), instance.availableServers);
+        
+        PropertyChangeEvent timeInSystemEvent = timeInSystemPropertyChangeListener.getLastEvent();
+        assertNotNull(timeInSystemEvent);
+        assertNull(timeInSystemEvent.getOldValue());
+        assertEquals(expectedTimeInSystem, (Double)timeInSystemEvent.getNewValue(), EPSILON);
+        
+        assertEquals(2, eventList.getScheduledEvents().size());
+        SimEvent scheduledEvent = eventList.getScheduledEvent("JobComplete", new Object[] {completingEntity});
+        assertNotNull(scheduledEvent);
+        assertEquals(simTime, scheduledEvent.getScheduledTime(), EPSILON);
+        
+        scheduledEvent = eventList.getScheduledEvent("StartService");
+        assertNotNull(scheduledEvent);
+        assertEquals(simTime, scheduledEvent.getScheduledTime(), EPSILON);
+        
+        instance.queue.clear();
+        eventList.coldReset();
+        eventList.setSimTime(simTime);
+        
+        server = 4;
+        instance.doEndService(server, completingEntity);
+        
+        assertEquals(1, eventList.getScheduledEvents().size());
+        scheduledEvent = eventList.getScheduledEvent("JobComplete", new Object[] {completingEntity});
+        assertNotNull(scheduledEvent);
+        assertEquals(simTime, scheduledEvent.getScheduledTime(), EPSILON);
+        
     }
 
     /**
-     * Test of doJobComplete method, of class EntityServer.
-     */
-    @Test
-    public void testDoJobComplete() {
-        System.out.println("doJobComplete");
-        Entity entity = null;
-        EntityServer instance = null;
-        instance.doJobComplete(entity);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
-    }
-
-    /**
-     * Test of setTotalNumberServers method, of class EntityServer.
+     * Test of setTotalNumberServers method, of class EntityServer. Checks that
+     * IllegalArgumentException thrown when passing 0 or a negative number
      */
     @Test
     public void testSetTotalNumberServers() {
@@ -146,45 +268,40 @@ public class EntityServerTest {
         try {
             instance.setTotalNumberServers(totalNumberServers);
             fail("setTotalNumberServers(0) should throw IllegalArgumentException");
-        } catch (IllegalArgumentException e) { }
-        
+        } catch (IllegalArgumentException e) {
+        }
+
         totalNumberServers = -1;
         try {
             instance.setTotalNumberServers(totalNumberServers);
             fail("setTotalNumberServers(-1) should throw IllegalArgumentException");
-        } catch (IllegalArgumentException e) { }
-        
+        } catch (IllegalArgumentException e) {
+        }
+
         totalNumberServers = 1;
         instance.setTotalNumberServers(totalNumberServers);
         assertEquals(totalNumberServers, instance.getTotalNumberServers());
     }
 
     /**
-     * Test of getAvailableServers method, of class EntityServer.
+     * Tests that a copy of availableServers is returned, not availableServers
+     * itself
      */
     @Test
     public void testGetAvailableServers() {
         System.out.println("getAvailableServers");
-        EntityServer instance = null;
-        Set<Integer> expResult = null;
         Set<Integer> result = instance.getAvailableServers();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        assertNotSame(instance.availableServers, result);
     }
 
     /**
-     * Test of getQueue method, of class EntityServer.
+     * Verifies that a copy of queue is returned, not the queue itself
      */
     @Test
     public void testGetQueue() {
         System.out.println("getQueue");
-        EntityServer instance = null;
-        SortedSet<Entity> expResult = null;
         SortedSet<Entity> result = instance.getQueue();
-        assertEquals(expResult, result);
-        // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+        assertNotSame(instance.queue, result);
     }
-    
+
 }
