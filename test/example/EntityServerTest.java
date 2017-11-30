@@ -10,19 +10,18 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import simkit.Entity;
-import simkit.Schedule;
 import simkit.SimEvent;
 import simkit.random.RandomVariateFactory;
 import simkit.util.PropertyChangeListenerHelper;
 import simkit.util.UnitTestEventList;
+import static util.Utilities.EPSILON;
+import static util.Utilities.setupEventList;
 
 /**
  *
  * @author ahbuss
  */
 public class EntityServerTest {
-
-    public static final double EPSILON = 1.0E-8;
 
     private static UnitTestEventList eventList;
 
@@ -38,10 +37,7 @@ public class EntityServerTest {
     public static void setUpClass() {
 //        This creates the special EventList for unit testing and 
 //        makes it the default for Schedule.
-        int id = Schedule.addNewEventList(UnitTestEventList.class);
-        eventList = (UnitTestEventList) Schedule.getEventList(id);
-        Schedule.setDefaultEventList(eventList);
-
+        eventList = setupEventList();
 //        Instantiate EntityServer instance that will be used by all tests
         instance = new EntityServer();
         instance.setTotalNumberServers(5);
@@ -159,7 +155,7 @@ public class EntityServerTest {
 //        availableServers whould not have changed
         PropertyChangeEvent availableServersEvent = availableServersPropertyChangeListener.getLastEvent();
         assertNull(availableServersEvent);
-        
+
 //        timeInSystem should not have changed
         PropertyChangeEvent timeInSystemEvent = timeInSystemPropertyChangeListener.getLastEvent();
         assertNull(timeInSystemEvent);
@@ -189,7 +185,7 @@ public class EntityServerTest {
     @Test
     public void testDoStartService() {
         System.out.println("doStartService");
-        
+
 //        Set an arbitrary simTime
         double simTime = 54321.0;
         eventList.setSimTime(simTime);
@@ -326,9 +322,9 @@ public class EntityServerTest {
     /**
      * Test of setTotalNumberServers method, of class EntityServer. Checks that
      * IllegalArgumentException thrown when passing 0 or a negative number.
-     * Normally setters are not tested if they are a simple pass through. In this
-     * case, however, we need to verify that bad values (0 or less) will not
-     * be let through.
+     * Normally setters are not tested if they are a simple pass through. In
+     * this case, however, we need to verify that bad values (0 or less) will
+     * not be let through.
      */
     @Test
     public void testSetTotalNumberServers() {
@@ -354,7 +350,7 @@ public class EntityServerTest {
 
     /**
      * Tests that a copy of availableServers is returned, not availableServers
-     * itself. Normally getters are not tested if they are a straightforward 
+     * itself. Normally getters are not tested if they are a straightforward
      * pass through, but since this is not one, it needs to be tested.
      */
     @Test
