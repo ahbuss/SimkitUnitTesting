@@ -48,35 +48,37 @@ public class RunEntityServer {
 //        entityServer.addPropertyChangeListener(simplePropertyDumper);
 
 //        Schedule.setVerbose(true);
-        double stopTime = 1000000;
+        double stopTime = 10000.0;
         Schedule.stopAtTime(stopTime);
 
         Schedule.reset();
         Schedule.startSimulation();
-        
-        System.out.printf("Simulation ended at time %,.3f%n", Schedule.getSimTime());
-        
-        System.out.printf("Avg # available servers: %.3f%n", numberAvailableServersStat.getMean());
-        System.out.printf("Avg utilization: %.3f%n", 1.0 - numberAvailableServersStat.getMean() / 
-                    entityServer.getTotalNumberServers());
-        System.out.printf("Avg # in queue: %.3f%n", numberInQueueStat.getMean());
-        System.out.printf("Avg delay in queue: %.3f%n", delayInQueueStat.getMean());
-        System.out.printf("Avg time in System: %.3f%n", timeInSystemStat.getMean());
-        
+
+        System.out.printf("%nSimulation ended at time %,.3f%n%n", Schedule.getSimTime());
+
+        System.out.printf("There have been %,d arrivals%n", entityCreator.getNumberArrivals());
+        System.out.printf("There have been %,d served%n%n", timeInSystemStat.getCount());
+
         double arrivalRate = entityCreator.getNumberArrivals() / Schedule.getSimTime();
-        System.out.printf("Avg arrival rate: %.3f%n", arrivalRate);
-        
+
+        System.out.printf("Average # in queue:  \t%.4f%n", numberInQueueStat.getMean());
+        System.out.printf("Average utilization:  \t%.4f%n", 1.0 - numberAvailableServersStat.getMean()
+                / entityServer.getTotalNumberServers());
+        System.out.printf("Average arrival rate:\t%.4f%n%n", arrivalRate);
+
+        System.out.println("Via Direct Tally:");
+        System.out.printf("Average delay in queue:\t%.4f%n", delayInQueueStat.getMean());
+        System.out.printf("Average time in System:\t%.4f%n%n", timeInSystemStat.getMean());
+
+        System.out.println("Via Little's Formula:");
         double delayInQueueLittle = numberInQueueStat.getMean() / arrivalRate;
-        
-        System.out.printf("Delay in queue via Little: %.3f%n", delayInQueueLittle );
-        
-        double avgNumberInSystem = numberInQueueStat.getMean() + entityServer.getTotalNumberServers() -
-                numberAvailableServersStat.getMean();
-        
-        System.out.printf("Avg # in System: %.3f%n", avgNumberInSystem);
-        System.out.printf("Avg time in system via Little: %.3f%n",
-                 avgNumberInSystem / arrivalRate);
-        
+
+        System.out.printf("Average delay in queue:\t%.4f%n", delayInQueueLittle);
+        double avgNumberInSystem = numberInQueueStat.getMean() + entityServer.getTotalNumberServers()
+                - numberAvailableServersStat.getMean();
+        System.out.printf("Average time in system:\t%.4f%n",
+                avgNumberInSystem / arrivalRate);
+
     }
 
 }

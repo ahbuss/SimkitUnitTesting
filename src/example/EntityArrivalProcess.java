@@ -1,7 +1,6 @@
 package example;
 
 import simkit.Entity;
-import simkit.examples.ArrivalProcess;
 import simkit.random.RandomVariate;
 
 /**
